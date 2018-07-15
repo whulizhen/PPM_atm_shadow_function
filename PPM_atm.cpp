@@ -3,284 +3,122 @@
 using namespace gfc;
 
 
+//ref: https://github.com/sasamil/Quartic/blob/master/quartic.h
+    // Copyright (C) 2016 by Саша Миленковић                                 *
+    /*   sasa.milenkovic.xyz@gmail.com   */
+    // solve cubic equation x^3 + a*x^2 + b*x + c
+    // x - array of size 3
+    // In case 3 real roots: => x[0], x[1], x[2], return 3
+    //         2 real roots: x[0], x[1],          return 2
+    //         1 real root : x[0], x[1] ± i*x[2], return 1
+    unsigned int solveP3(double *x,double a,double b,double c)
+    {
+        double a2 = a*a;
+        double q  = (a2 - 3*b)/9;
+        double r  = (a*(2*a2-9*b) + 27*c)/54;
+        double r2 = r*r;
+        double q3 = q*q*q;
+        double A,B;
+        double M_2PI = M_PI*2;
+        double eps = 1.0e-12;
+        if(r2<q3)
+        {
+            double t=r/sqrt(q3);
+            if( t<-1) t=-1;
+            if( t> 1) t= 1;
+            t=acos(t);
+            a/=3; q=-2*sqrt(q);
+            x[0]=q*cos(t/3)-a;
+            x[1]=q*cos((t+M_2PI)/3)-a;
+            x[2]=q*cos((t-M_2PI)/3)-a;
+            return 3;
+        }
+        else
+        {
+            A =-pow(fabs(r)+sqrt(r2-q3),1./3);
+            if( r<0 ) A=-A;
+            B = (0==A ? 0 : q/A);
+            
+            a/=3;
+            x[0] =(A+B)-a;
+            x[1] =-0.5*(A+B)-a;
+            x[2] = 0.5*sqrt(3.)*(A-B);
+            if(fabs(x[2])<eps) { x[2]=x[1]; return 2; }
+            
+            return 1;
+        }
+    }
 
-/*
-Modified from https://github.com/dxli/quarticSolver
-Author: Dongxu Li, Written for the LibreCAD project: http://librecad.org/
-*/
-unsigned int quadraticSolver(double * ce,  double * roots)
-   //quadratic solver for
-   // x^2 + ce[0] x + ce[1] =0
-   {
-       double discriminant=0.25*ce[0]*ce[0]-ce[1];
-       if (discriminant < 0.0 ) return 0;
-       roots[0]= -0.5*ce[0] + sqrt(discriminant);
-       roots[1]= -ce[0] - roots[0];
-       return 2;
+// solve quartic equation x^4 + a*x^3 + b*x^2 + c*x + d
+    // Attention - this function returns dynamically allocated array. It has to be released afterwards.
+    unsigned int solve_quartic(double a, double b, double c, double d,double x[4] )
+    {
+        double eps = 1e-9;
+        int num_real = 0;
+        std::complex<double> retval[4];
+        
+        // https://math.stackexchange.com/questions/785/is-there-a-general-formula-for-solving-4th-degree-equations-quartic
+        double A = b - 3.0/8.0*a*a;
+        double B = c - a*b/2.0 + a*a*a/8.0;
+        double C = d - a*c/4.0 + a*a*b/16.0 - 3*a*a*a*a/256;
+        
+        double coef3[3]={0.0};
+        coef3[0] = -A/2.0;
+        coef3[1] = -C;
+        coef3[2] = (4*A*C-B*B)/8;
+        double x3[3];
+        unsigned int iZeroes = solveP3(x3, coef3[0], coef3[1], coef3[2]);
+        double s = x3[0];
+        // The essence - choosing Y with maximal absolute value.
+        if(iZeroes != 1)
+        {
+            if( fabs(x3[1]) > fabs(s)) s = x3[1];
+            if( fabs(x3[2]) > fabs(s)) s = x3[2];
+        }
+
+
+        // what is the solution ? A= 2s, i.e. B==0
+        // y^4 + Ay^2 + C = 0
+        if( fabs(B)< eps)
+        {
+            double D = A*A -4*C;
+            complex<double> x1 = (-A + sqrt(D))*0.5;
+            complex<double> x2 = (-A - sqrt(D))*0.5;
+            
+            retval[0] = sqrt(x1)- a/4;
+            retval[1] = -sqrt(x1)- a/4;
+            retval[2] =  sqrt(x2) - a/4;
+            retval[3] = -sqrt(x2) -a/4;
+        }
+        else
+        {
+            complex<double> sqD1 = sqrt(2*s -A);
+            complex<double> sqD2 = sqrt(-2*s - A + 2*B/sqD1);
+            complex<double> sqD3 = sqrt(-2*s - A - 2*B/sqD1);
+
+            retval[0] = -0.5*sqD1 + 0.5*sqD2 - a/4.0;
+            retval[1] = -0.5*sqD1 - 0.5*sqD2 - a/4.0;
+            retval[2] =  0.5*sqD1 + 0.5*sqD3 - a/4.0;
+            retval[3] =  0.5*sqD1 - 0.5*sqD3 - a/4.0;
+        }
+        
+        
+        
+        
+        
+        
+        for(int i = 0 ; i< 4; i++)
+        {
+            if( fabs(retval[i].imag())< eps )
+            {
+                x[num_real] = retval[i].real();
+                num_real++;
+            }
+        }
+       
+       return num_real;
+       
    }
-
-   /*
-   Modified from https://github.com/dxli/quarticSolver
-   Author: Dongxu Li, Written for the LibreCAD project: http://librecad.org/
-   */
-unsigned int cubicSolver(double * ce, double *roots)
-   //cubic equation solver
-   // x^3 + ce[0] x^2 + ce[1] x + ce[2] = 0
-   {
-       // depressed cubic, Tschirnhaus transformation, x= t - b/(3a)
-       // t^3 + p t +q =0
-       unsigned int ret=0;
-       double shift=(1./3)*ce[0];
-       double p=ce[1] -shift*ce[0];
-       double q=ce[0]*( (2./27)*ce[0]*ce[0]-(1./3)*ce[1])+ce[2];
-       //Cardano's method,
-       //	t=u+v
-       //	u^3 + v^3 + ( 3 uv + p ) (u+v) + q =0
-       //	select 3uv + p =0, then,
-       //	u^3 + v^3 = -q
-       //	u^3 v^3 = - p^3/27
-       //	so, u^3 and v^3 are roots of equation,
-       //	z^2 + q z - p^3/27 = 0
-       //	and u^3,v^3 are,
-       //		-q/2 \pm sqrt(q^2/4 + p^3/27)
-       //	discriminant= q^2/4 + p^3/27
-       //std::cout<<"cubicSolver:: p="<<p<<"\tq="<<q<<std::endl;
-
-       double discriminant= (1./27)*p*p*p+(1./4)*q*q;
-       if ( fabs(p)< 1.0e-75)
-       {
-           ret=1;
-           *roots=(q>0)?-pow(q,(1./3)):pow(-q,(1./3));
-           *roots -= shift;
-           return ret;
-       }
-
-       //std::cout<<"cubicSolver:: discriminant="<<discriminant<<std::endl;
-
-       if( discriminant>0.0 )
-       {
-           double ce2[2]= {q, -1./27*p*p*p},u3[2];
-           ret=quadraticSolver(ce2,u3);
-           if (! ret )
-           { //should not happen
-               std::cerr<<"cubicSolver::Error cubicSolver("<<ce[0]<<' '<<ce[1]<<' '<<ce[2]<<")\n";
-           }
-           ret=1;
-           double u,v;
-           u= (q<=0) ? pow(u3[0], 1./3): -pow(-u3[1],1./3);
-           //u=(q<=0)?pow(-0.5*q+sqrt(discriminant),1./3):-pow(0.5*q+sqrt(discriminant),1./3);
-           v=(-1./3)*p/u;
-
-           //std::cout<<"cubicSolver:: u="<<u<<"\tv="<<v<<std::endl;
-           //std::cout<<"cubicSolver:: u^3="<<u*u*u<<"\tv^3="<<v*v*v<<std::endl;
-
-           *roots=u+v - shift;
-           return ret;
-       }
-       ret=3;
-       std::complex<double> u(q,0),rt[3];
-       u=pow(-0.5*u-sqrt(0.25*u*u+p*p*p/27),1./3);
-       rt[0]=u-p/(3.*u)-shift;
-       std::complex<double> w(-0.5,sqrt(3.)/2);
-       rt[1]=u*w-p/(3.*u*w)-shift;
-       rt[2]=u/w-p*w/(3.*u)-shift;
-       //	std::cout<<"Roots:\n";
-       //	std::cout<<rt[0]<<std::endl;
-       //	std::cout<<rt[1]<<std::endl;
-       //	std::cout<<rt[2]<<std::endl;
-
-       roots[0]=rt[0].real();
-       roots[1]=rt[1].real();
-       roots[2]=rt[2].real();
-       return ret;
-   }
-
-   /*
-   Modified from https://github.com/dxli/quarticSolver
-   Author: Dongxu Li, Written for the LibreCAD project: http://librecad.org/
-   */
-unsigned int quarticSolver(double * ce, double *roots)
-   //quartic solver
-   // x^4 + ce[0] x^3 + ce[1] x^2 + ce[2] x + ce[3] = 0
-   {
-       // x^4 + a x^3 + b x^2 +c x + d = 0
-       // depressed quartic, x= t - a/4
-       // t^4 + ( b - 3/8 a^2 ) t^2 + (c - a b/2 + a^3/8) t + d - a c /4 + a^2 b/16 - 3 a^4/256 =0
-       // t^4 + p t^2 + q t + r =0
-       // p= b - (3./8)*a*a;
-       // q= c - 0.5*a*b+(1./8)*a*a*a;
-       // r= d - 0.25*a*c+(1./16)*a*a*b-(3./256)*a^4
-       unsigned int ret=0;
-       double shift=0.25*ce[0];
-       double shift2=shift*shift;
-       double a2=ce[0]*ce[0];
-       double p= ce[1] - (3./8)*a2;
-       double q= ce[2] + ce[0]*((1./8)*a2 - 0.5*ce[1]);
-       double r= ce[3] - shift*ce[2] + (ce[1] - 3.*shift2)*shift2;
-       double eps = 1.0E-16;
-       //std::cout<<"quarticSolver:: p="<<p<<"\tq="<<q<<"\tr="<<r<<std::endl;
-
-       if (fabs(q) <= eps) // q == 0
-       {
-           // Biquadratic equations
-           double discriminant= 0.25*p*p -r;
-
-           if(discriminant < 0.)
-           {
-               return 0;
-           }
-
-           double t2[2];
-           t2[0]=-0.5*p-sqrt(discriminant);  // t2[0] > t2[1]
-           t2[1]= -p - t2[0];
-
-           if( fabs(discriminant) < eps )
-           {
-               roots[0]=sqrt(t2[0])-shift;
-               roots[1]= -sqrt(t2[0])-shift;
-               return 2;
-           }
-
-           if ( t2[0] >= 0. )
-           {// four real roots
-               roots[0]=sqrt(t2[0])-shift;
-               roots[1]= -sqrt(t2[0])-shift;
-               roots[2]=sqrt(t2[1])-shift;
-               roots[3]= -sqrt(t2[1])-shift;
-               return 4;
-           }
-           if ( t2[1] >= 0.)
-           { // two real roots
-               roots[0]=sqrt(t2[1])-shift;
-               roots[1]= -roots[0]-shift;
-               return 2;
-           }
-           return 0;
-       }
-       if ( fabs(r)< eps )  // a cubic
-       {
-           double cubic[3]= {0.,p,q};
-           roots[0]=0.;
-           ret=1+cubicSolver(cubic,roots+1);
-           for(unsigned int i=0; i<ret; i++) roots[i] -= shift;
-           return ret;
-       }
-       double cubic[3]= {2.*p,p*p-4.*r,-q*q},croots[3]={0.0};
-       ret = cubicSolver(cubic,croots);
-       int rootNum = 0; // this is for roots
-
-       for( int i = 0 ; i< ret ; i++ )
-       {
-           int num_root = 0;
-           double myroots[4] = {0.0};
-           double droots[2] = {0.0};
-           double ce2[2];
-
-           if( croots[i] < 0.0 || fabs(croots[i])< eps ) // only can be positive
-           {
-               continue;
-           }
-
-           //double u2 = croots[i]; , u can not be ZERO
-           double u = sqrt(croots[i]);
-           double v = 0.5*(p+croots[i])-0.5*q/u ;
-           double w = 0.5*(p+croots[i])+0.5*q/u ;
-           ce2[0]=	u;
-           ce2[1]= v;
-           int ret1=quadraticSolver(ce2,droots);
-           for( int j = 0 ; j< ret1 ; j++ )
-           {
-               if( num_root == 0 )
-               {
-                   myroots[num_root++] = droots[0];
-               }
-               else
-               {
-                   bool exist = false;
-                   for(int k = 0 ; k< num_root; k++ )
-                   {
-                       if( myroots[k] == droots[j])
-                       {
-                           exist = true;
-                           break;
-                       }
-                   }
-
-                   if(exist == false)
-                   {
-                       myroots[num_root++] = droots[j];
-                   }
-
-               }
-
-
-           }
-
-           ce2[0]=	-u;
-           ce2[1]= w;
-           int ret2=quadraticSolver(ce2,droots);
-           for( int j = 0 ; j< ret2 ; j++ )
-           {
-               if( num_root == 0 )
-               {
-                   myroots[num_root++] = droots[0];
-               }
-               else
-               {
-                   bool exist = false;
-                   for(int k = 0 ; k< num_root; k++ )
-                   {
-                       if( myroots[k] == droots[j])
-                       {
-                           exist = true;
-                           break;
-                       }
-                   }
-
-                   if(exist == false)
-                   {
-                       myroots[num_root++] = droots[j];
-                   }
-
-               }
-           }
-
-           //comparing myroots with roots
-           for( int j = 0 ; j< num_root ; j++ )
-           {
-               if( rootNum == 0 )
-               {
-                   roots[rootNum++] = myroots[0];
-               }
-               else
-               {
-                   bool exist = false;
-                   for(int k = 0 ; k< rootNum; k++ )
-                   {
-                       if( roots[k] == myroots[j])
-                       {
-                           exist = true;
-                           break;
-                       }
-                   }
-
-                   if(exist == false)
-                   {
-                       roots[rootNum++] = myroots[j];
-                   }
-               }
-           }
-       }
-
-       //do the shift
-       for(int i = 0 ; i< rootNum; i++ )
-       {
-           roots[i] -= shift;
-       }
-       return rootNum;
-
-   }
-
 
 
 
@@ -597,8 +435,7 @@ int myperspectiveProjection(double a, double b, GVector& sunpos_ecef, GVector& s
 
        double XX[4]={0.0}; // the solution of quartic equation
        int num_of_solution = 0;
-       num_of_solution = quarticSolver(ce,XX);
-
+       num_of_solution = solve_quartic(ce[0], ce[1], ce[2], ce[3], XX);
        if( num_of_solution == 3 || num_of_solution == 4)
        {
            printf("WARNING: shadowfactor, %d intersections!\n", num_of_solution);
