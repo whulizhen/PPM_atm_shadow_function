@@ -345,10 +345,6 @@ int myperspectiveProjection(double a, double b, GVector& sunpos_ecef, GVector& s
            K[i] = K[i]*1.0E6;
        }
 
-//        double CEOF[5]={K[0]/K[5], 2*K[1]/K[5], K[2]/K[5], K[3]/K[5],K[4]/K[5] };
-//        double XC[2] = { (CEOF[1]*CEOF[4] - 2*CEOF[2]*CEOF[3])/(4*CEOF[0]*CEOF[2] - CEOF[1]*CEOF[1]), (CEOF[1]*CEOF[3] - 2*CEOF[0]*CEOF[4])/(4*CEOF[0]*CEOF[2] - CEOF[1]*CEOF[1])    };
-
-
        //E: calculate the eigen value and eigen vector of matrix B
        t =  sqrt( (K[0]+K[2])*(K[0]+K[2]) - 4.0*(K[0]*K[2] - K[1]*K[1]) ) ;
        double lambda1 = (K[0]+K[2]+t)/2.0;
@@ -454,14 +450,6 @@ int myperspectiveProjection(double a, double b, GVector& sunpos_ecef, GVector& s
        // the projection of the earth's centre Pe in the transformed frame is obtained by converting PEC_isf into the rotated and translated frame
        PEC_new[0] = PEC_isf.x*r1[0] + r1[1]*PEC_isf.y + 0.5*tx;
        PEC_new[1] = PEC_isf.x*r2[0] + r2[1]*PEC_isf.y + 0.5*ty;
-
-       //PEC_new[0] = (PEC_isf.x-0.5*tx)*r1[0] + (PEC_isf.y-0.5*ty)*r2[0];
-       //PEC_new[1] = (PEC_isf.x-0.5*tx)*r1[1] + (PEC_isf.y-0.5*ty)*r2[1];
-
-
-       //double boundary_intersection[2] ={0.0};
-       //PEC_new[0] = 0.0;
-       //PEC_new[1] = 0.0;
 
        //double mytest = (lambda1*Os[0]*Os[0] + lambda2*Os[1]*Os[1] )/(OM-K[5]);
 
@@ -615,17 +603,11 @@ int myperspectiveProjection(double a, double b, GVector& sunpos_ecef, GVector& s
            double Area_earth =0.0, Area_atm = 0.0, Area_solar=0.0;
            int state1 = -1, state2 =-1;
 
-           double EC_intersection1[2]={0.0},EC_intersection2[2]={0.0}, EC[2]={0.0};
-           double Boundary_earth[2] = {0.0}, Boundary_atm[2] = {0.0};
-           double PEC_new[2] ={0.0};
-           double sun_intersection[2]={0.0};
-
            double x1 =0.0, x2 =0.0, dis0 =0.0, dis1 = 0.0, dis2 = 0.0, thickness;
            double r_sun = 0.0;
 
            if(hgt_atm == 0.0 )
            {
-               //state2 = perspectiveProjection(a,b,sunpos_eci,satpos_eci,r_sun, Area_earth,EC_intersection2, EC);
                 state2 = myperspectiveProjection(a,b,sunpos_eci,satpos_eci,r_sun, Area_earth,dis1, dis0);
                 Area_solar = 3.14159265357*r_sun*r_sun;
 
