@@ -1,5 +1,4 @@
 #include "GVector.hpp"
-#include "GMatrix.h"
 using namespace gfc;
 
 
@@ -50,7 +49,6 @@ using namespace gfc;
     }
 
 // solve quartic equation x^4 + a*x^3 + b*x^2 + c*x + d
-    // Attention - this function returns dynamically allocated array. It has to be released afterwards.
     unsigned int solve_quartic(double a, double b, double c, double d,double x[4] )
     {
         double eps = 1e-9;
@@ -101,11 +99,6 @@ using namespace gfc;
             retval[2] =  0.5*sqD1 + 0.5*sqD3 - a/4.0;
             retval[3] =  0.5*sqD1 - 0.5*sqD3 - a/4.0;
         }
-        
-        
-        
-        
-        
         
         for(int i = 0 ; i< 4; i++)
         {
@@ -308,33 +301,43 @@ int myperspectiveProjection(double a, double b, GVector& sunpos_ecef, GVector& s
        PEC_isf.z = dotproduct(n, PEC);
 
        //C: calculate M
-       GMatrix M(3,3);//A(3,3);
-       t = (r.x*r.x/a2 + r.y*r.y/a2 + r.z*r.z/b2 - 1.0);
-       M(0,0) = r.x*r.x/a2/a2 - t/a2;
-       M(0,1) = r.x*r.y/a2/a2;
-       M(0,2) = r.x*r.z/a2/b2;
-       M(1,0) = M(0,1);
-       M(1,1) = r.y*r.y/a2/a2 - t/a2;
-       M(1,2) = r.y*r.z/a2/b2;
-       M(2,0) = M(0,2);
-       M(2,1) = M(1,2);
-       M(2,2) = r.z*r.z/b2/b2 - t/b2;
+       double M[3][3]={0.0};
+        t = (r.x*r.x/a2 + r.y*r.y/a2 + r.z*r.z/b2 - 1.0);
+        M[0][0] = r.x*r.x/a2/a2 - t/a2;
+        M[0][1] = r.x*r.y/a2/a2;
+        M[0][2] = r.x*r.z/a2/b2;
+        M[1][0] = M[0][1];
+        M[1][1] = r.y*r.y/a2/a2 - t/a2;
+        M[1][2] = r.y*r.z/a2/b2;
+        M[2][0] = M[0][2];
+        M[2][1] = M[1][2];
+        M[2][2] = r.z*r.z/b2/b2 - t/b2;
 
        //D: calculate K
        double K[6] = {0.0};
-       GMatrix tu(3,1), tv(3,1),tn(3,1), to(3,1),tr(3,1);
-       tu[0] = u.x;tu[1] = u.y;tu[2] = u.z;
-       tv[0] = v.x;tv[1] = v.y;tv[2] = v.z;
-       //to[0] = o.x;to[1] = o.y;to[2] = o.z;
-       //tr[0] = r.x;tr[1] = r.y;tr[2] = r.z;
-       tn[0] = n.x;tn[1] = n.y;tn[2] = n.z;
-
-       ((~tu)*M*tu).getData(K); // K[0]
-       ((~tu)*M*tv).getData(K+1); // K[1]
-       ((~tv)*M*tv).getData(K+2); // K[2]
-       (-2.0*f*(~tu*M*tn)).getData(K+3); //K[3]
-       (-2.0*f*(~tv*M*tn)).getData(K+4);  //K[4]
-       (f*f*(~tn*M*tn)).getData(K+5); //K[5]
+       K[0] = (u.x*M[0][0] + u.y*M[1][0] + u.z*M[2][0])*u.x
+             + (u.x*M[0][1] + u.y*M[1][1] + u.z*M[2][1])*u.y
+             + (u.x*M[0][2] + u.y*M[1][2] + u.z*M[2][2])*u.z;
+        
+        K[1] = (u.x*M[0][0] + u.y*M[1][0] + u.z*M[2][0])*v.x
+            + (u.x*M[0][1] + u.y*M[1][1] + u.z*M[2][1])*v.y
+            + (u.x*M[0][2] + u.y*M[1][2] + u.z*M[2][2])*v.z;
+        
+        K[2] = (v.x*M[0][0] + v.y*M[1][0] + v.z*M[2][0])*v.x
+            + (v.x*M[0][1] + v.y*M[1][1] + v.z*M[2][1])*v.y
+            + (v.x*M[0][2] + v.y*M[1][2] + v.z*M[2][2])*v.z;
+        
+        K[3] = -((u.x*M[0][0] + u.y*M[1][0] + u.z*M[2][0])*n.x
+            + (u.x*M[0][1] + u.y*M[1][1] + u.z*M[2][1])*n.y
+            + (u.x*M[0][2] + u.y*M[1][2] + u.z*M[2][2])*n.z)*f*2.0;
+        
+        K[4] = -((v.x*M[0][0] + v.y*M[1][0] + v.z*M[2][0])*n.x
+            + (v.x*M[0][1] + v.y*M[1][1] + v.z*M[2][1])*n.y
+            + (v.x*M[0][2] + v.y*M[1][2] + v.z*M[2][2])*n.z)*f*2.0;
+        
+        K[5] = ((n.x*M[0][0] + n.y*M[1][0] + n.z*M[2][0])*n.x
+            + (n.x*M[0][1] + n.y*M[1][1] + n.z*M[2][1])*n.y
+            + (n.x*M[0][2] + n.y*M[1][2] + n.z*M[2][2])*n.z)*f*f;
 
 
 
