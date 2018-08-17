@@ -51,7 +51,7 @@ using namespace gfc;
 // solve quartic equation x^4 + a*x^3 + b*x^2 + c*x + d
     unsigned int solve_quartic(double a, double b, double c, double d,double x[4] )
     {
-        double eps = 1e-9;
+        double eps = 1e-6;
         int num_real = 0;
         std::complex<double> retval[4];
         
@@ -151,8 +151,15 @@ using namespace gfc;
           }
 
           //ref: http://www.robertobigoni.eu/Matematica/Conics/segmentHyp/segmentHyp.html
-          double s1 = b*( Q1[0]*sqrt(  (Q1[0]*Q1[0]/a/a) -1.0 ) - a*acosh(Q1[0]/a) );
-          double s2 = b*( Q2[0]*sqrt(  (Q2[0]*Q2[0]/a/a) -1.0 ) - a*acosh(Q2[0]/a) );
+         double xQ1 = fabs(Q1[0]);
+         double xQ2 = fabs(Q2[0]);
+        
+        s1 = b*( xQ1*sqrt(  (xQ1*xQ1/a/a) -1.0 ) - a*acosh(xQ1/a) );
+        
+        s2 = b*( xQ2*sqrt(  (xQ2*xQ2/a/a) -1.0 ) - a*acosh(xQ2/a) );
+          
+          
+          
           double ss = s1<=s2?s1:s2;
           double sl = s1>=s2?s1:s2;
           double S2 =0.0;
@@ -206,7 +213,17 @@ using namespace gfc;
           // elliptical sector
           //double SQ1Q2Oe = 0.5*a*b*acos(cte);
 
-          double SQ1Q2Oe = 0.5*a*b*fabs( acos(ae[0]/a) - acos(be[0]/a) );
+         double SQ1Q2Oe = 0.0;
+         double aa =  a> b? a: b;
+        if(ae[1]*be[1]<0.0)
+        {
+            SQ1Q2Oe = 0.5*a*b*fabs( acos(fabs(ae[0])/aa) + acos(fabs(be[0])/aa) );
+        }
+        else
+        {
+            SQ1Q2Oe = 0.5*a*b*fabs( acos(ae[0]/aa) - acos(be[0]/aa) );
+        }
+        
 
           double S1 = SQ1Q2Oe - TQ1Q2Oe;
 
@@ -247,27 +264,74 @@ int myperspectiveProjection(double a, double b, GVector& sunpos_ecef, GVector& s
        // if it is in the front of earth, it is always full phase
        // otherwise,using the photogrammetry method
        // A= diag{1/a2,1/a2, 1/b2 }, A^{-1} = diag{a2, a2, b2}
-       double nAn = n.x*n.x*a2 + n.y*n.y*a2 + + n.z*n.z*b2;
-       double s1 = sqrt(1.0/nAn);
-       double s2 = - s1;
-       double rtn = dotproduct(r, n);
-       double ntn = dotproduct(n, n);
-       double t1 = (rtn - 1.0/s1)/ntn;
-       double t2 = (rtn - 1.0/s2)/ntn;
-
-       //GVector xp1(s1*n.x/a2, s1*n.y/b2, s1*n.z/b2 );
-       //GVector xp2(s2*n.x/a2, s2*n.y/b2, s2*n.z/b2 );
-
-       GVector xs1 = r - t1*n;
-       GVector xs2 = r - t2*n;
-
-       double ds1 = (xs1-rs).norm();
-       double ds2 = (xs2-rs).norm();
-
-       double t =0.0;
-       t = (ds1 <= ds2) ? ds1:ds2;
-       ds2 = (ds1 >= ds2)? ds1:ds2;
-       ds1 = t;
+        double nAin = n.x*n.x*a2 + n.y*n.y*a2 + + n.z*n.z*b2;
+        double rtn = dotproduct(r, n);
+        double ntn = dotproduct(n, n);
+        double ds1 = 0.0, ds2 =0.0;
+        
+        double nAn = n.x*n.x/a2 + n.y*n.y/a2 + n.z*n.z/b2;
+        double rsAn = n.x*rs.x/a2 + n.y*rs.y/a2 + n.z*rs.z/b2;
+        double rsArs = rs.x*rs.x/a2 + rs.y*rs.y/a2 + rs.z*rs.z/b2;
+        double Delta = rsAn*rsAn - nAn*(rsArs-1.0);
+        
+        double t =0.0, t1 = 0.0, t2 =0.0;
+        
+        if(Delta > 0) // sun-sat line intersects the Earth ellipsoid
+        {
+            t1 = (-2.0*rsAn + sqrt(Delta))/2.0/nAn;
+            t2 = (-2.0*rsAn - sqrt(Delta))/2.0/nAn;
+            
+            ds1 = (t1 <= t2) ? t1:t2;
+            ds2 = (t1 <= t2) ? t2:t1;
+            
+        }
+         // sun-sat line DOES NOT intersect the Earth ellipsoid, get the tangents
+        else
+        {
+            // normal vector to the plane sat,sun and Earth
+            GVector p = crossproduct(r, n);
+            // normal at the ellipsoid that is perpendicular to n
+            GVector ns = crossproduct(n, p);
+            ns.normalise();
+            
+            t = ns.x*a2*ns.x + ns.y*a2*ns.y + ns.z*b2*ns.z ;
+            double lam1 = sqrt( 1.0/ t );
+            double lam2 = -lam1;
+            
+            double s1 = dotproduct(ns, rs) - lam1*t;
+            double s2 = dotproduct(ns, rs) - lam2*t;
+            
+            double lam = fabs(s1)<fabs(s2)? lam1: lam2;
+            double dis = lam*(n.x*ns.x*a2 + n.y*ns.y*a2 + n.z*ns.z*b2) - dotproduct(n, rs);
+            
+            
+            s1 = sqrt(1.0/nAin);
+            s2 = - s1;
+            
+           t1 = (rtn - 1.0/s1)/ntn;
+           t2 = (rtn - 1.0/s2)/ntn;
+            
+            //GVector xp1(s1*n.x/a2, s1*n.y/b2, s1*n.z/b2 );
+            //GVector xp2(s2*n.x/a2, s2*n.y/b2, s2*n.z/b2 );
+            
+            GVector xs1 = r - t1*n;
+            GVector xs2 = r - t2*n;
+            
+            ds1 = (xs1-rs).norm();
+            ds2 = (xs2-rs).norm();
+            
+            
+            t = (ds1 <= ds2) ? ds1:ds2;
+            ds2 = (ds1 >= ds2)? ds1:ds2;
+            ds1 = t;
+            
+            if(ds1 < dis)
+            {
+                ds1 = dis;
+            }
+            
+            
+        }
 
        if(dis_sat_sun < ds1)  // full phase
        {
@@ -630,9 +694,9 @@ int myperspectiveProjection(double a, double b, GVector& sunpos_ecef, GVector& s
            }
            else  // considering the atmosphere
            {
-               state2 = myperspectiveProjection(a,b,sunpos_eci,satpos_eci,r_sun, Area_earth,dis2,dis0);
                state1 = myperspectiveProjection(a_atm,b_atm,sunpos_eci,satpos_eci,r_sun, Area_atm,dis1,dis0);
-
+               state2 = myperspectiveProjection(a,b,sunpos_eci,satpos_eci,r_sun, Area_earth,dis2,dis0);
+              
                double mu1 = 0.0;  // 大气层辐射通过系数, distance = 0
                double mu2 = 1.0;  // distance = 1;
 
@@ -696,16 +760,36 @@ int myperspectiveProjection(double a, double b, GVector& sunpos_ecef, GVector& s
                // totally in the atmosphere
                if( state1 == -1 && state2 == 0 )
                {
-                   x1 = (dis0 - dis2)/thickness;
-                   x2 = (dis0 - dis2 + 2.0*r_sun )/thickness;
-
-                   //log
-                   //double u1 = a_log + b_log*log(x1+1.0);
-                   //double u2 = a_log + b_log*log(x2+1.0);
-
-                   //linear
-                   double u1 = (mu2-mu1) * x1 + mu1;
-                   double u2 = (mu2-mu1) * x2 + mu1;
+                  double u1 =0, u2 =0;
+                if(dis2 != 0.0)
+                {
+                    x1 = (dis0 - dis2)/thickness;
+                    x2 = (dis0 - dis2 + 2.0*r_sun )/thickness;
+                    
+                    //log
+                    //double u1 = a_log + b_log*log(x1+1.0);
+                    //double u2 = a_log + b_log*log(x2+1.0);
+                    
+                    //linear
+                    u1 = (mu2-mu1) * x1 + mu1;
+                    u2 = (mu2-mu1) * x2 + mu1;
+                }
+                else if (fabs(dis2)< 1.0E-9) // no projection for the solid Earth (outside of the solid Earth), but the satellite is in the atmosphere's projection
+                {
+                    
+                    //thickness = hgt_atm*dis1 / ((a_atm+b_atm)/2.0 );
+//                    thickness = 500*r_sun;
+//                    x1 = (dis1 - dis0  - 2*r_sun)/thickness;
+//                    x2 = (dis1 - dis0)/thickness;
+//
+//                    //linear
+//                    u1 = (mu1-mu2) * x1 + mu2;
+//                    u2 = (mu1-mu2) * x2 + mu2;
+//
+                    u1 = 0.5;
+                    u2 = 0.5;
+                    
+                }
 
                    factor = (u1+u2)/2.0;
                }
