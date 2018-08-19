@@ -1,10 +1,29 @@
+//============================================================================
+//
+//  This file is part of GFC, the GNSS FOUNDATION CLASS.
+//
+//  The GFC is free software; you can redistribute it and/or modify
+//  it under the terms of the GNU Lesser General Public License as published
+//  by the Free Software Foundation; either version 3.0 of the License, or
+//  any later version.
+//
+//  The GFC is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU Lesser General Public License for more details.
+//
+//  You should have received a copy of the GNU Lesser General Public
+//  License along with GFC; if not, write to the Free Software Foundation,
+//  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
+//
+//  Copyright 2017, lizhen
+//
+//============================================================================
+
+
 #include "GVector.hpp"
 using namespace gfc;
 
-
-//ref: https://github.com/sasamil/Quartic/blob/master/quartic.h
-    // Copyright (C) 2016 by Саша Миленковић                                 *
-    /*   sasa.milenkovic.xyz@gmail.com   */
     // solve cubic equation x^3 + a*x^2 + b*x + c
     // x - array of size 3
     // In case 3 real roots: => x[0], x[1], x[2], return 3
@@ -194,87 +213,134 @@ using namespace gfc;
       double area_ellispe(double Q1[2], double Q2[2], double Os[2], double Rs,double a, double b, bool in_out)
       {
           double area = 0.0;
-
-          double as[2] = {Q1[0]-Os[0],Q1[1] -Os[1] };
-          double bs[2] = {Q2[0]-Os[0],Q2[1] -Os[1] };
-
-          double ae[2] = {Q1[0],Q1[1]  };
-          double be[2] = {Q2[0],Q2[1]  };
-
-
-          double TQ1Q2Os = 0.5*fabs(as[0]*bs[1] - bs[0]*as[1]);
-          double TQ1Q2Oe = 0.5*fabs(ae[0]*be[1] - be[0]*ae[1]);
-
-          double cts = (as[0]*bs[0] + as[1]*bs[1] )/sqrt( (as[0]*as[0]+as[1]*as[1]) * (bs[0]*bs[0]+bs[1]*bs[1]) );
-          double SQ1Q2Os = 0.5 * acos(cts)*Rs*Rs;
-
-          //
-          //double cte = (ae[0]*be[0] + ae[1]*be[1] )/sqrt( (ae[0]*ae[0]+ae[1]*ae[1]) * (be[0]*be[0]+be[1]*be[1]) );
-          // elliptical sector
-          //double SQ1Q2Oe = 0.5*a*b*acos(cte);
-
-         double SQ1Q2Oe = 0.0;
-         double aa =  a> b? a: b;
-        if(ae[1]*be[1]<0.0)
+        
+        double as[2] = {Q1[0]-Os[0],Q1[1] -Os[1] };
+        double bs[2] = {Q2[0]-Os[0],Q2[1] -Os[1] };
+        
+        double ae[2] = {Q1[0],Q1[1]  };
+        double be[2] = {Q2[0],Q2[1]  };
+        
+        
+        double TQ1Q2Os = 0.5*fabs(as[0]*bs[1] - bs[0]*as[1]);
+        double TQ1Q2Oe = 0.5*fabs(ae[0]*be[1] - be[0]*ae[1]);
+        
+        double cts = (as[0]*bs[0] + as[1]*bs[1] )/sqrt( (as[0]*as[0]+as[1]*as[1]) * (bs[0]*bs[0]+bs[1]*bs[1]) );
+        double SQ1Q2Os = 0.5 * acos(cts)*Rs*Rs;
+        
+        //
+        //double cte = (ae[0]*be[0] + ae[1]*be[1] )/sqrt( (ae[0]*ae[0]+ae[1]*ae[1]) * (be[0]*be[0]+be[1]*be[1]) );
+        // elliptical sector
+        //double SQ1Q2Oe = 0.5*a*b*acos(cte);
+        
+        double SQ1Q2Oe = 0.0;
+        double aa =  a> b? a: b;
+        double q1 =0.0, q2 =0.0;
+        if(ae[0]>0 && ae[1]>0)  // the first quadrant
         {
-            SQ1Q2Oe = 0.5*a*b*fabs( acos(fabs(ae[0])/aa) + acos(fabs(be[0])/aa) );
+            q1 = atan(ae[1]/ ae[0]);
         }
-        else
+        else if(ae[0]<0 && ae[1]>0)
         {
-            SQ1Q2Oe = 0.5*a*b*fabs( acos(ae[0]/aa) - acos(be[0]/aa) );
+            q1 = 3.14159265357 - atan(-ae[1]/ae[0]);
+        }
+        else if(ae[0]<0 && ae[1]<0)
+        {
+            q1 = 3.14159265357 + atan(ae[1]/ ae[0]);
+        }
+        else if( ae[0]>0 && ae[1]<0 )
+        {
+            q1 = 3.14159265357*2 - atan(-ae[1]/ae[0]);
         }
         
-
-          double S1 = SQ1Q2Oe - TQ1Q2Oe;
-
-          if(in_out == true) // the centre of the sun is inside the ellipse
-          {
-              area = SQ1Q2Os - TQ1Q2Os - S1;
-          }
-          else // // the centre of the sun is outside the ellipse
-          {
-              double area_shadow =  SQ1Q2Os - TQ1Q2Os + S1;
-              area = 3.14159265357*Rs*Rs -area_shadow;
-          }
-
-          return area;
+        if(be[0]>0 && be[1]>0)  // the first quadrant
+        {
+            q2 = atan(be[1]/be[0]);
+        }
+        else if(be[0]<0 && be[1]>0)
+        {
+            q2 = 3.14159265357 - atan(-be[1]/be[0]);
+        }
+        else if(be[0]<0 && be[1]<0)
+        {
+            q2 = 3.14159265357 + atan(be[1]/be[0]);
+        }
+        else if( be[0]>0 && be[1]<0 )
+        {
+            q2 = 3.14159265357*2 - atan(-be[1]/be[0]);
+        }
+        
+        double s_a = a*b/2.0*( q1 - atan2( (b-a)*sin(2.0*q1), (a+b) + (b-a)*cos(2*q1)) );
+        double s_b = a*b/2.0*( q2 - atan2( (b-a)*sin(2.0*q2), (a+b) + (b-a)*cos(2*q2)) );
+        
+        SQ1Q2Oe = fabs(s_b - s_a);
+        
+        double S1 = SQ1Q2Oe - TQ1Q2Oe;
+        
+        if(in_out == true) // the centre of the sun is inside the ellipse
+        {
+            area = SQ1Q2Os - TQ1Q2Os - S1;
+        }
+        else // // the centre of the sun is outside the ellipse
+        {
+            double area_shadow =  SQ1Q2Os - TQ1Q2Os + S1;
+            area = 3.14159265357*Rs*Rs -area_shadow;
+        }
+        
+        return area;
       }
 
 
 int myperspectiveProjection(double a, double b, GVector& sunpos_ecef, GVector& satpos_ecef, double& r_solar, double& area_bright, double& dis_boundary, double& dis_circle)
    {
        int state = -1;
-       double Rs = 695700.0; //km
-       double ab = a*b;
-       double a2 = a*a;
-       double b2 = b*b;
-       double ab2 = ab*ab;
-
-       GVector r = satpos_ecef;
-       GVector rs = sunpos_ecef;
-
-       GVector o, u, v, n;
-       double f = 1000.0;
-       n = r - rs;
-       double dis_sat_earth = r.norm();
-       double dis_sat_sun = n.norm();
-       n.normalise();
-
-       //A: first test if the satellite is in the front of earth,
-       // if it is in the front of earth, it is always full phase
-       // otherwise,using the photogrammetry method
-       // A= diag{1/a2,1/a2, 1/b2 }, A^{-1} = diag{a2, a2, b2}
+        double Rs = 695700.0; //km
+        double ab = a*b;
+        double a2 = a*a;
+        double b2 = b*b;
+        double ab2 = ab*ab;
+        
+        GVector r = satpos_ecef;
+        GVector rs = sunpos_ecef;
+        
+        double t =0.0, t1 = 0.0, t2 =0.0, dis =0, s1 = 0, s2=0,ds1 = 0.0, ds2 =0.0;
+        //A: first test if the satellite is in the front of earth,
+        // if it is in the front of earth, it is always full phase
+        // otherwise,using the photogrammetry method
+        // A= diag{1/a2,1/a2, 1/b2 }, A^{-1} = diag{a2, a2, b2}
+        
+        GVector o, u, v, n;
+        double f = 1000.0;
+        n = r - rs;
+        double dis_sat_earth = r.norm();
+        double dis_sat_sun = n.norm();
+        n.normalise();
+        
         double nAin = n.x*n.x*a2 + n.y*n.y*a2 + + n.z*n.z*b2;
         double rtn = dotproduct(r, n);
         double ntn = dotproduct(n, n);
-        double ds1 = 0.0, ds2 =0.0;
+        
+        
+        s1 = sqrt(1.0/nAin);
+        s2 = - s1;
+        
+        t1 = (rtn - 1.0/s1)/ntn;
+        t2 = (rtn - 1.0/s2)/ntn;
+        
+        GVector xs1 = r - t1*n;
+        GVector xs2 = r - t2*n;
+        
+        ds1 = (xs1-rs).norm();
+        ds2 = (xs2-rs).norm();
+        
+        
+        t = (ds1 <= ds2) ? ds1:ds2;
+        ds2 = (ds1 >= ds2)? ds1:ds2;
+        ds1 = t;
         
         double nAn = n.x*n.x/a2 + n.y*n.y/a2 + n.z*n.z/b2;
         double rsAn = n.x*rs.x/a2 + n.y*rs.y/a2 + n.z*rs.z/b2;
         double rsArs = rs.x*rs.x/a2 + rs.y*rs.y/a2 + rs.z*rs.z/b2;
         double Delta = rsAn*rsAn - nAn*(rsArs-1.0);
-        
-        double t =0.0, t1 = 0.0, t2 =0.0;
         
         if(Delta > 0) // sun-sat line intersects the Earth ellipsoid
         {
@@ -282,10 +348,8 @@ int myperspectiveProjection(double a, double b, GVector& sunpos_ecef, GVector& s
             t2 = (-2.0*rsAn - sqrt(Delta))/2.0/nAn;
             
             ds1 = (t1 <= t2) ? t1:t2;
-            ds2 = (t1 <= t2) ? t2:t1;
-            
+            //ds2 = (t1 <= t2) ? t2:t1;
         }
-         // sun-sat line DOES NOT intersect the Earth ellipsoid, get the tangents
         else
         {
             // normal vector to the plane sat,sun and Earth
@@ -298,75 +362,51 @@ int myperspectiveProjection(double a, double b, GVector& sunpos_ecef, GVector& s
             double lam1 = sqrt( 1.0/ t );
             double lam2 = -lam1;
             
-            double s1 = dotproduct(ns, rs) - lam1*t;
-            double s2 = dotproduct(ns, rs) - lam2*t;
+            s1 = dotproduct(ns, rs) - lam1*t;
+            s2 = dotproduct(ns, rs) - lam2*t;
             
             double lam = fabs(s1)<fabs(s2)? lam1: lam2;
-            double dis = lam*(n.x*ns.x*a2 + n.y*ns.y*a2 + n.z*ns.z*b2) - dotproduct(n, rs);
+            dis = lam*(n.x*ns.x*a2 + n.y*ns.y*a2 + n.z*ns.z*b2) - dotproduct(n, rs);
             
-            
-            s1 = sqrt(1.0/nAin);
-            s2 = - s1;
-            
-           t1 = (rtn - 1.0/s1)/ntn;
-           t2 = (rtn - 1.0/s2)/ntn;
-            
-            //GVector xp1(s1*n.x/a2, s1*n.y/b2, s1*n.z/b2 );
-            //GVector xp2(s2*n.x/a2, s2*n.y/b2, s2*n.z/b2 );
-            
-            GVector xs1 = r - t1*n;
-            GVector xs2 = r - t2*n;
-            
-            ds1 = (xs1-rs).norm();
-            ds2 = (xs2-rs).norm();
-            
-            
-            t = (ds1 <= ds2) ? ds1:ds2;
-            ds2 = (ds1 >= ds2)? ds1:ds2;
-            ds1 = t;
-            
-            if(ds1 < dis)
-            {
-                ds1 = dis;
-            }
-            
-            
+            ds1 = dis;
         }
-
-       if(dis_sat_sun < ds1)  // full phase
-       {
-           state = 0;
-           return state;
-       }
-       else if(dis_sat_sun >= ds2)  // ellipse
-       {
-           state = 2;
-       }
-       else if( dis_sat_sun >= ds1 && dis_sat_sun <= ds2 ) // hyperbola
-       {
-            state = 1;  // hyperbola
-       }
-
-       //B: build the ISF coordinate system
-       o = r - f*n; // the origin of the photo coordinate system (PSC)
-       //u = r - rtn*n;
-       //u = n - 1.0/rtn*r;
-       u = rtn*n - r;
-       u.normalise();
-       v = crossproduct(n, u);
-
-       // the projection of earth's centre PEC in ECEF
-       double t_dis = sqrt( (f*dis_sat_earth/rtn)*(f*dis_sat_earth/rtn) - f*f );
-       GVector PEC = t_dis*u; // vector from PSC to PEC
-       GVector PEC_isf;
-       // convert PEC into ISF
-       PEC_isf.x = dotproduct(u, PEC);
-       PEC_isf.y = dotproduct(v, PEC);
-       PEC_isf.z = dotproduct(n, PEC);
-
-       //C: calculate M
-       double M[3][3]={0.0};
+         
+        if(dis_sat_sun < ds1)  // full phase
+        {
+            state = 0;
+            //导致后面的 area_bright, dis_boundary, and dis_circle 都没有计算
+            
+            return state;
+        }
+        else if(dis_sat_sun >= ds2)  // ellipse
+        {
+            state = 2;
+        }
+        else if( dis_sat_sun >= ds1 && dis_sat_sun <= ds2 ) // hyperbola
+        {
+             state = 1;  // hyperbola
+        }
+        
+        //B: build the ISF coordinate system
+        o = r - f*n; // the origin of the photo coordinate system (PSC)
+        
+        u = n - 1.0/rtn*r; 
+        
+        u.normalise();
+        v = crossproduct(n, u);
+        
+        // the projection of earth's centre PEC in ECEF
+        double t_dis = sqrt( (f*dis_sat_earth/rtn)*(f*dis_sat_earth/rtn) - f*f );
+        GVector PEC = t_dis*u; // vector from PSC to PEC
+        GVector PEC_isf;
+        // convert PEC into ISF
+        PEC_isf.x = dotproduct(u, PEC);
+        PEC_isf.y = dotproduct(v, PEC);
+        PEC_isf.z = dotproduct(n, PEC);
+        
         t = (r.x*r.x/a2 + r.y*r.y/a2 + r.z*r.z/b2 - 1.0);
+        
+        double M[3][3]={0.0};
         M[0][0] = r.x*r.x/a2/a2 - t/a2;
         M[0][1] = r.x*r.y/a2/a2;
         M[0][2] = r.x*r.z/a2/b2;
@@ -376,10 +416,12 @@ int myperspectiveProjection(double a, double b, GVector& sunpos_ecef, GVector& s
         M[2][0] = M[0][2];
         M[2][1] = M[1][2];
         M[2][2] = r.z*r.z/b2/b2 - t/b2;
-
-       //D: calculate K
-       double K[6] = {0.0};
-       K[0] = (u.x*M[0][0] + u.y*M[1][0] + u.z*M[2][0])*u.x
+        
+        
+        //D: calculate K
+        double K[6] = {0.0};
+        
+        K[0] = (u.x*M[0][0] + u.y*M[1][0] + u.z*M[2][0])*u.x
              + (u.x*M[0][1] + u.y*M[1][1] + u.z*M[2][1])*u.y
              + (u.x*M[0][2] + u.y*M[1][2] + u.z*M[2][2])*u.z;
         
@@ -402,247 +444,218 @@ int myperspectiveProjection(double a, double b, GVector& sunpos_ecef, GVector& s
         K[5] = ((n.x*M[0][0] + n.y*M[1][0] + n.z*M[2][0])*n.x
             + (n.x*M[0][1] + n.y*M[1][1] + n.z*M[2][1])*n.y
             + (n.x*M[0][2] + n.y*M[1][2] + n.z*M[2][2])*n.z)*f*f;
+        
+        
+        // just make the numbers larger for visualisation
+        for( int i =0; i< 6; i++ )
+        {
+            K[i] = K[i]*1.0E6;
+        }
+        
+        //E: calculate the eigen value and eigen vector of matrix B
+        t =  sqrt( (K[0]+K[2])*(K[0]+K[2]) - 4.0*(K[0]*K[2] - K[1]*K[1]) ) ;
+        double lambda1 = (K[0]+K[2]+t)/2.0;
+        double lambda2 = (K[0]+K[2]-t)/2.0;
+        
+        double  r1[2]={0.0,1.0},r2[2]={1.0,0.0};
+        // http://www.math.harvard.edu/archive/21b_fall_04/exhibits/2dmatrices/index.html
+        if(K[1]!= 0.0)
+        {
+            r1[0] = lambda1 - K[2];
+            r1[1] = K[1];
 
+            r2[0] = lambda2 - K[2];
+            r2[1] = K[1];
 
+        }
+        else if( fabs(K[2]) < 1.0E-12)
+        {
+            r1[0] = 1;
+            r1[1] = 0;
 
-
-       // just make the numbers larger for visualisation
-       for( int i =0; i< 6; i++ )
-       {
-           K[i] = K[i]*1.0E6;
-       }
-
-       //E: calculate the eigen value and eigen vector of matrix B
-       t =  sqrt( (K[0]+K[2])*(K[0]+K[2]) - 4.0*(K[0]*K[2] - K[1]*K[1]) ) ;
-       double lambda1 = (K[0]+K[2]+t)/2.0;
-       double lambda2 = (K[0]+K[2]-t)/2.0;
-
-       //get the eigen vector of B, i.e. matrix Q
-       double  r1[2]={0.0,1.0},r2[2]={1.0,0.0};
-       bool sol1 = false, sol2 =false;
-       if( fabs(lambda1 - K[0])<1.0E-12)
-       {
-           r1[1] = 0.0;
-           if( (lambda1 - K[0])*K[1] <0.0 ) // 异号
-           {
-               r1[0] = -1.0;
-           }
-           else
-           {
-               r1[0] = 1.0;
-           }
-           sol1 = true;
-       }
-
-       if( fabs(lambda2 - K[2])<1.0E-12)
-       {
-           r2[0] = 0.0;
-           if( (lambda2 - K[2])*K[1] <0.0 ) // 异号
-           {
-               r2[1] = -1.0;
-           }
-           else
-           {
-               r2[1] = 1.0;
-           }
-           sol2 = true;
-       }
-
-       if(sol1 ==false)
-       {
-           r1[0] = K[1]/(lambda1 - K[0]);  // r1 for lambda1
-       }
-
-       if(sol2 ==false)
-       {
-           r2[1] = K[1]/(lambda2 - K[2]);  // r2 for lambda2
-       }
-
-       //get the unit vector
-       t = sqrt(r1[0]*r1[0]+r1[1]*r1[1]);
-       r1[0] = r1[0]/t;r1[1] = r1[1]/t;
-
-       t= sqrt(r2[0]*r2[0]+r2[1]*r2[1]);
-       r2[0] = r2[0]/t;r2[1] = r2[1]/t;
-
-       //the larger eigen value is lambda1
-       if( fabs(lambda1) <= fabs(lambda2) )  // swap lamda1 and lamda2, with r1 and r2
-       {
-           t = lambda1;
-           lambda1 = lambda2;
-           lambda2 = t;
-           double r[2] ={r1[0],r1[1]};
-           r1[0] = r2[0]; r1[1] = r2[1];
-           r2[0] = r[0]; r2[1] = r[1];
-       }
-
-       double OM = (K[2]*K[3]*K[3] - 2.0*K[1]*K[3]*K[4] + K[0]*K[4]*K[4] )/(4.0*(K[0]*K[2] - K[1]*K[1]));
-       // the translation parameters
-       double tx = (r1[0]*K[3] + r1[1]*K[4])/lambda1;
-       double ty = (r2[0]*K[3] + r2[1]*K[4])/lambda2;
-
-       // semi-major axis and the semi-minor axis
-       double AA =  ( OM - K[5] )/lambda1;
-       double BB =  ( OM - K[5] )/lambda2;
-       double R0 = f*Rs/dis_sat_sun;
-       r_solar = R0;
-
-       //F: Solve the quartic in the translated and rotated frame
-       double A = lambda1*(R0 - 0.5*tx )*(R0 - 0.5*tx) + 0.25*lambda2*ty*ty - OM + K[5];
-       double B = 2.0*lambda2*R0*ty;
-       double C = lambda1*(0.5*tx*tx - 2*R0*R0) + lambda2*(0.5*ty*ty + 4*R0*R0) - 2*OM + 2*K[5];
-       double D = 2*lambda2*R0*ty;
-       double E = lambda1*(R0+0.5*tx)*(R0+0.5*tx) + 0.25*lambda2*ty*ty - OM + K[5];
-
-       double ce[4]={B/A,C/A,D/A,E/A};
-
-       double XX[4]={0.0}; // the solution of quartic equation
-       int num_of_solution = 0;
-       num_of_solution = solve_quartic(ce[0], ce[1], ce[2], ce[3], XX);
-       if( num_of_solution == 3 || num_of_solution == 4)
-       {
-           printf("WARNING: shadowfactor, %d intersections!\n", num_of_solution);
-           exit(0);
-       }
-
-       // calculate the coordinates of the intersections betweent the circle and the conical curve in transformed frame
-       // in the new frame, the origin is at the centre of the projection of the Earth
-       double Q1[2]={ (1.0 - XX[0]*XX[0])/(1.0 + XX[0]*XX[0])*R0 + 0.5*tx , 2*XX[0]/(1.0 + XX[0]*XX[0])*R0 + 0.5*ty};
-       double Q2[2]={ (1.0 - XX[1]*XX[1])/(1.0 + XX[1]*XX[1])*R0 + 0.5*tx , 2*XX[1]/(1.0 + XX[1]*XX[1])*R0 + 0.5*ty};
-
-       //calculate the sun's projection centre Os (PSC) in the transformed frame
-       double Os[2] = {0.5*tx , 0.5*ty };
-       //double Os[2] = {0.0,0.0};
-       double PEC_new[2] = {0.0,0.0};
-       // the projection of the earth's centre Pe in the transformed frame is obtained by converting PEC_isf into the rotated and translated frame
-       PEC_new[0] = PEC_isf.x*r1[0] + r1[1]*PEC_isf.y + 0.5*tx;
-       PEC_new[1] = PEC_isf.x*r2[0] + r2[1]*PEC_isf.y + 0.5*ty;
-
-       //double mytest = (lambda1*Os[0]*Os[0] + lambda2*Os[1]*Os[1] )/(OM-K[5]);
-
-       //figure out the intersection between the line from PEC_new to Os and the conical curve.
-       // parameter equation of line from Oe to Os in transformed frame, x = td
-       double PEC_Os_len = sqrt( (Os[0]-PEC_new[0])*(Os[0]-PEC_new[0]) + (Os[1]-PEC_new[1])*(Os[1]-PEC_new[1]));
-       double d[2] = { (Os[0]-PEC_new[0])/PEC_Os_len,(Os[1]-PEC_new[1])/PEC_Os_len };
-       double aa = lambda1*d[0]*d[0] + lambda2*d[1]*d[1];
-       double bb = 2*(lambda1*PEC_new[0]*d[0] + lambda2*PEC_new[1]*d[1]);
-       double cc = lambda1*PEC_new[0]*PEC_new[0] + lambda2*PEC_new[1]*PEC_new[1] + K[5] - OM;
-       t1 = (-bb + sqrt(bb*bb - 4.0*aa*cc ))/aa/2.0;
-       t2 = (-bb - sqrt(bb*bb - 4.0*aa*cc ))/aa/2.0;
-
-       if(t1*t2<0.0)
-       {
-           t = t1>0?t1:t2;
-       }
-       else
-       {
-          t =  t1<=t2?t1:t2;
-       }
-
-       dis_boundary = t;
-
-       //boundary_intersection[0] = PEC_new[0] + t*d[0];
-       //boundary_intersection[1] = PEC_new[1] + t*d[1];
-
-       // //figure out the intersection between the line from PEC_new to Os and the solar circle
-       aa = d[0]*d[0] + d[1]*d[1];
-       bb = 2*(PEC_new[0]*d[0]+PEC_new[1]*d[1]) - (d[0]*tx + d[1]*ty );
-       cc = PEC_new[0]*PEC_new[0]+PEC_new[1]*PEC_new[1] - (PEC_new[0]*tx + PEC_new[1]*ty ) + 0.25*(tx*tx+ty*ty) - R0*R0;
-
-       t1 = (-bb + sqrt(bb*bb - 4.0*aa*cc ))/aa/2.0;
-       t2 = (-bb - sqrt(bb*bb - 4.0*aa*cc ))/aa/2.0;
-       // t should be the smaller one, which means closer to the solid Earth
-       if(t1*t2<0.0)
-       {
-           t = t1>0?t1:t2;
-       }
-       else
-       {
+            r2[0] = 0;
+            r2[1] = 1;
+        }
+        
+        //get the unit vector
+        t = sqrt(r1[0]*r1[0]+r1[1]*r1[1]);
+        r1[0] = r1[0]/t;r1[1] = r1[1]/t;
+        
+        t= sqrt(r2[0]*r2[0]+r2[1]*r2[1]);
+        r2[0] = r2[0]/t;r2[1] = r2[1]/t;
+        
+        double OM = (K[2]*K[3]*K[3] - 2.0*K[1]*K[3]*K[4] + K[0]*K[4]*K[4] )/(4.0*(K[0]*K[2] - K[1]*K[1]));
+        // the translation parameters
+        double tx = (r1[0]*K[3] + r1[1]*K[4])/lambda1;
+        double ty = (r2[0]*K[3] + r2[1]*K[4])/lambda2;
+        
+        // semi-major axis and the semi-minor axis
+        double AA =  ( OM - K[5] )/lambda1;
+        double BB =  ( OM - K[5] )/lambda2;
+        double R0 = f*Rs/dis_sat_sun;
+        r_solar = R0;
+        
+        //F: Solve the quartic in the translated and rotated frame
+        double A = lambda1*(R0 - 0.5*tx )*(R0 - 0.5*tx) + 0.25*lambda2*ty*ty - OM + K[5];
+        double B = 2.0*lambda2*R0*ty;
+        double C = lambda1*(0.5*tx*tx - 2*R0*R0) + lambda2*(0.5*ty*ty + 4*R0*R0) - 2*OM + 2*K[5];
+        double D = 2*lambda2*R0*ty;
+        double E = lambda1*(R0+0.5*tx)*(R0+0.5*tx) + 0.25*lambda2*ty*ty - OM + K[5];
+        
+        double ce[4]={B/A,C/A,D/A,E/A};
+        
+        double XX[4]={0.0}; // the solution of quartic equation
+        int num_of_solution = 0;
+        
+        
+        num_of_solution = GMath::solve_quartic(ce[0], ce[1], ce[2], ce[3], XX);
+        
+        if( num_of_solution == 3 || num_of_solution == 4)
+        {
+            printf("WARNING: shadowfactor, %d intersections!\n", num_of_solution);
+            exit(0);
+        }
+        
+        //calculate the sun's projection centre Os (PSC) in the transformed frame
+        double Os[2] = {0.5*tx , 0.5*ty };
+        //double Os[2] = {0.0,0.0};
+        double PEC_new[2] = {0.0,0.0};
+        // the projection of the earth's centre Pe in the transformed frame is obtained by converting PEC_isf into the rotated and translated frame
+        PEC_new[0] = PEC_isf.x*r1[0] + r1[1]*PEC_isf.y + 0.5*tx;
+        PEC_new[1] = PEC_isf.x*r2[0] + r2[1]*PEC_isf.y + 0.5*ty;
+        
+        //printf("PEC_new: %f %f\n",PEC_new[0], PEC_new[1]);
+        
+        // calculate the coordinates of the intersections betweent the circle and the conical curve in transformed frame
+        // in the new frame, the origin is at the centre of the projection of the Earth
+        double Q1[2]={ (1.0 - XX[0]*XX[0])/(1.0 + XX[0]*XX[0])*R0 + 0.5*tx , 2*XX[0]/(1.0 + XX[0]*XX[0])*R0 + 0.5*ty};
+        double Q2[2]={ (1.0 - XX[1]*XX[1])/(1.0 + XX[1]*XX[1])*R0 + 0.5*tx , 2*XX[1]/(1.0 + XX[1]*XX[1])*R0 + 0.5*ty};
+        
+        //figure out the intersection between the line from PEC_new to Os and the conical curve.
+        // parameter equation of line from Oe to Os in transformed frame, x = td
+        double PEC_Os_len = sqrt( (Os[0]-PEC_new[0])*(Os[0]-PEC_new[0]) + (Os[1]-PEC_new[1])*(Os[1]-PEC_new[1]));
+        double d[2] = { (Os[0]-PEC_new[0])/PEC_Os_len,(Os[1]-PEC_new[1])/PEC_Os_len };
+        double aa = lambda1*d[0]*d[0] + lambda2*d[1]*d[1];
+        double bb = 2*(lambda1*PEC_new[0]*d[0] + lambda2*PEC_new[1]*d[1]);
+        double cc = lambda1*PEC_new[0]*PEC_new[0] + lambda2*PEC_new[1]*PEC_new[1] + K[5] - OM;
+        t1 = (-bb + sqrt(bb*bb - 4.0*aa*cc ))/aa/2.0;
+        t2 = (-bb - sqrt(bb*bb - 4.0*aa*cc ))/aa/2.0;
+        
+        if(t1*t2<0.0)
+        {
+            t = t1>0?t1:t2;
+        }
+        else
+        {
            t =  t1<=t2?t1:t2;
-       }
-
-       dis_circle = t;
-
-       t = K[0]*K[2] - K[1]*K[1];
-       if( t > 0.0) // ellipse
-       {
-           bool in_out = false;
-
-           if( OM/(OM-K[5]) <= 1.0 )
-           {
-               in_out = true;
-           }
-           else
-           {
-               in_out = false;
-           }
-
-           if( in_out == true && num_of_solution < 2 )  //umbra
-           {
-               state = -1;
-               return state;
-           }
-           if( in_out == false && num_of_solution < 2 )  //full phase
-           {
-               state = 0;
-               return state;
-           }
-
-           // penumbra
-           area_bright = area_ellispe(Q1, Q2, Os, R0, sqrt(AA), sqrt(BB), in_out);
-
-       }
-       else if (t < 0.0) // hyperbola
-       {
-           bool in_out = false;
-
-           if( OM/(OM-K[5]) <= 1.0 )
-           {
-               in_out = false;
-           }
-           else
-           {
-               in_out = true;
-           }
-
-           if( in_out == true && num_of_solution <2)
-           {
-               state = -1; // umbra
-               return state;
-           }
-
-           if( in_out == false && num_of_solution <2)
-           {
-               state = 0; // full phase
-               return state;
-           }
-
-           // penumbra
-           double a =0, b =0;
-           bool x_axis = true;
-           if(AA > 0)
-           {
-               a =sqrt(AA);
-           }
-           else
-           {
-               a = sqrt(-AA);
-               x_axis = false;
-           }
-           if(BB > 0)
-           {
-               b =sqrt(BB);
-               x_axis =false;
-           }
-           else
-           {
-               b = sqrt(-BB);
-           }
-
-           area_bright = area_hyperbola( Q1, Q2, Os, R0, a, b, in_out, x_axis);
-       }
-
-       return state;
+        }
+        
+        dis_boundary = t;
+        
+        //boundary_intersection[0] = PEC_new[0] + t*d[0];
+        //boundary_intersection[1] = PEC_new[1] + t*d[1];
+        
+        // //figure out the intersection between the line from PEC_new to Os and the solar circle
+        aa = d[0]*d[0] + d[1]*d[1];
+        bb = 2*(PEC_new[0]*d[0]+PEC_new[1]*d[1]) - (d[0]*tx + d[1]*ty );
+        cc = PEC_new[0]*PEC_new[0]+PEC_new[1]*PEC_new[1] - (PEC_new[0]*tx + PEC_new[1]*ty ) + 0.25*(tx*tx+ty*ty) - R0*R0;
+        
+        t1 = (-bb + sqrt(bb*bb - 4.0*aa*cc ))/aa/2.0;
+        t2 = (-bb - sqrt(bb*bb - 4.0*aa*cc ))/aa/2.0;
+        // t should be the smaller one, which means closer to the solid Earth
+        if(t1*t2<0.0)
+        {
+            t = t1>0?t1:t2;
+        }
+        else
+        {
+            t =  t1<=t2?t1:t2;
+        }
+        
+        dis_circle = t;
+        
+        
+        t = K[0]*K[2] - K[1]*K[1];
+        if( t > 0.0) // ellipse
+        {
+            bool in_out = false;
+            
+            if( OM/(OM-K[5]) <= 1.0 )
+            {
+                in_out = true;
+            }
+            else
+            {
+                in_out = false;
+            }
+            
+            if( in_out == true && num_of_solution < 2 )  //umbra
+            {
+                state = -1;
+                return state;
+            }
+            if( in_out == false && num_of_solution < 2 )  //full phase
+            {
+                state = 0;
+                return state;
+            }
+            
+            // penumbra
+            area_bright = area_ellispe(Q1, Q2, Os, R0, sqrt(AA), sqrt(BB), in_out);
+            
+        }
+        else if (t < 0.0) // hyperbola
+        {
+            bool in_out = false;
+            
+            if( OM/(OM-K[5]) <= 1.0 )
+            {
+                in_out = false;
+            }
+            else
+            {
+                in_out = true;
+            }
+            
+            if( in_out == true && num_of_solution <2)
+            {
+                state = -1; // umbra
+                return state;
+            }
+            
+            if( in_out == false && num_of_solution <2)
+            {
+                state = 0; // full phase
+                return state;
+            }
+            
+            // penumbra
+            double a =0, b =0;
+            bool x_axis = true;
+            if(AA > 0)
+            {
+                a =sqrt(AA);
+            }
+            else
+            {
+                a = sqrt(-AA);
+                x_axis = false;
+            }
+            if(BB > 0)
+            {
+                b =sqrt(BB);
+                x_axis =false;
+            }
+            else
+            {
+                b = sqrt(-BB);
+            }
+            
+            area_bright = area_hyperbola( Q1, Q2, Os, R0, a, b, in_out, x_axis);
+                        
+        }
+        
+        return state;
 
    }
 
