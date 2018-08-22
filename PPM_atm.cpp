@@ -138,92 +138,99 @@ using namespace std;
 
 
 
-      double area_hyperbola(double Q1[2], double Q2[2], double Os[2], double Rs,double a, double b, bool in_out, bool x_axis)
+      double area_hyperbola(double Q1[2], double Q2[2], double Os[2],double Oe[2], double Rs,double a, double b, bool in_out, bool x_axis)
       {
         double area = 0.0;
-      double as[2] = {Q1[0]-Os[0],Q1[1] -Os[1] };
-      double bs[2] = {Q2[0]-Os[0],Q2[1] -Os[1] };
-
-      double ae[2] = {Q1[0],Q1[1]  };
-      double be[2] = {Q2[0],Q2[1]  };
-
-
-      double TQ1Q2Os = 0.5*fabs(as[0]*bs[1] - bs[0]*as[1]);
-      double TQ1Q2Oe = 0.5*fabs(ae[0]*be[1] - be[0]*ae[1]);
-
-      double cts = (as[0]*bs[0] + as[1]*bs[1] )/sqrt( (as[0]*as[0]+as[1]*as[1]) * (bs[0]*bs[0]+bs[1]*bs[1]) );
-      double SQ1Q2Os = 0.5 * acos(cts)*Rs*Rs;
-
-      //calculate the area of hyperbolic secttion
-
-
-      double SQ1Q2Oe = 0.5*a*b*fabs( acos(ae[0]/a) - acos(be[0]/a) );
-      double S1 = SQ1Q2Oe - TQ1Q2Oe;
-
-      if(x_axis == false) //// 主轴是y, 整个双曲线旋转90度，使得x为主轴
-      {
-          // rotation transformation
-          // x' = y
-          // y' =-x
-          double tmp = 0.0;
-          tmp = Q1[0]; Q1[0] = Q1[1]; Q1[1] = -tmp;
-          tmp = Q2[0]; Q2[0] = Q2[1]; Q2[1] = -tmp;
-          tmp = a;
-          a = b;
-          b = tmp;
-      }
-
-      //ref: http://www.robertobigoni.eu/Matematica/Conics/segmentHyp/segmentHyp.html
-      double s1 = 0.0, s2 =0.0;
-
-      double xQ1 = fabs(Q1[0]);
-      double xQ2 = fabs(Q2[0]);
-
-      s1 = b*( xQ1*sqrt(  (xQ1*xQ1/a/a) -1.0 ) - a*acosh(xQ1/a) );
-
-      s2 = b*( xQ2*sqrt(  (xQ2*xQ2/a/a) -1.0 ) - a*acosh(xQ2/a) );
-
-
-
-      if(isnan(s1) || isnan(s2) )
-      {
-          int testc = 0;
-      }
-
-      double ss = s1<=s2?s1:s2;
-      double sl = s1>=s2?s1:s2;
-      double S2 =0.0;
-      if( Q1[1]*Q2[1] < 0.0 )  //2个交点在x轴不同侧
-      {
-          double k = ( Q2[1] - Q1[1] )/( Q2[0] - Q1[0]);
-          double m = Q1[1] - k *Q1[0];
-          double x_m = - m/k;
-
-          S2 = ss + (sl - ss)/2.0 - 0.5*fabs((Q2[0]- x_m)*Q2[1]) + 0.5*fabs((x_m - Q1[0])*Q1[1]);
-      }
-      else  //2 个交点在同一侧
-      {
-          double s_trapizium = 0.5*fabs( Q1[0] - Q2[0] )* (fabs(Q1[1]) + fabs(Q2[1]) );
-          S2 = (sl - ss - 2*s_trapizium )/2.0;
-      }
-
-
-      if(in_out == true) // the centre of the sun is inside the ellipse
-      {
-          area = SQ1Q2Os - TQ1Q2Os - S2;
-      }
-      else // // the centre of the sun is outside the ellipse
-      {
-          double area_shadow =  SQ1Q2Os - TQ1Q2Os + S2;
-          area = 3.14159265357*Rs*Rs -area_shadow;
-      }
-
-      if(area < 0.0 || area > 3.1415926*Rs*Rs)
-      {
-          int testc = 0;
-      }
-
-      return area;
+        double as[2] = {Q1[0]-Os[0],Q1[1] -Os[1] };
+        double bs[2] = {Q2[0]-Os[0],Q2[1] -Os[1] };
+        
+        double ae[2] = {Q1[0]-Oe[0],Q1[1] -Oe[1]  };
+        double be[2] = {Q2[0]-Oe[0],Q2[1] -Oe[1]  };
+        
+        
+        double TQ1Q2Os = 0.5*fabs(as[0]*bs[1] - bs[0]*as[1]);
+        double TQ1Q2Oe = 0.5*fabs(ae[0]*be[1] - be[0]*ae[1]);
+        
+        double cts = (as[0]*bs[0] + as[1]*bs[1] )/sqrt( (as[0]*as[0]+as[1]*as[1]) * (bs[0]*bs[0]+bs[1]*bs[1]) );
+        double SQ1Q2Os = 0.5 * acos(cts)*Rs*Rs;
+        
+        //calculate the area of hyperbolic secttion
+        
+        if(x_axis == false) //// 主轴是y, 整个双曲线旋转90度，使得x为主轴
+        {
+            // rotation transformation
+            // x' = y
+            // y' =-x
+            double tmp = 0.0;
+            tmp = Q1[0]; Q1[0] = Q1[1]; Q1[1] = -tmp;
+            tmp = Q2[0]; Q2[0] = Q2[1]; Q2[1] = -tmp;
+            tmp = a;
+            a = b;
+            b = tmp;
+        }
+        
+        //ref: http://www.robertobigoni.eu/Matematica/Conics/segmentHyp/segmentHyp.html
+        double s1 = 0.0, s2 =0.0;
+        
+        double xQ1 = fabs(Q1[0]);
+        double xQ2 = fabs(Q2[0]);
+        
+        s1 = b*( xQ1*sqrt(  (xQ1*xQ1/a/a) -1.0 ) - a*acosh(xQ1/a) );
+        
+        s2 = b*( xQ2*sqrt(  (xQ2*xQ2/a/a) -1.0 ) - a*acosh(xQ2/a) );
+        
+        if(isnan(s1) || isnan(s2) )
+        {
+            int testc = 0;
+        }
+        
+        double ss = s1<=s2?s1:s2;
+        double sl = s1>=s2?s1:s2;
+        double S2 =0.0;
+        if( Q1[1]*Q2[1] < 0.0 )  //2个交点在y轴不同侧
+        {
+            double x_m = 0.0;
+            
+            if(fabs(Q2[0] - Q1[0])>1.0E-10)
+            {
+                double k = ( Q2[1] - Q1[1] )/( Q2[0] - Q1[0]);
+                double m = Q1[1] - k *Q1[0];
+                x_m = - m/k;
+            }
+            else
+            {
+                x_m = Q1[0];
+            }
+            
+            if(Q1[0]>Q2[0])
+            {
+                S2 = ss + (sl - ss)/2.0 - 0.5*fabs((x_m - Q1[0])*Q1[1]) + 0.5*fabs((Q2[0]- x_m)*Q2[1]) ;
+            }
+            else
+            {
+                S2 = ss + (sl - ss)/2.0 - 0.5*fabs((Q2[0]- x_m)*Q2[1]) + 0.5*fabs((x_m - Q1[0])*Q1[1]);
+            }
+            
+            
+        }
+        else  //2 个交点在同一侧
+        {
+            double s_trapizium = 0.5*fabs( Q1[0] - Q2[0] )* (fabs(Q1[1]) + fabs(Q2[1]) );
+            S2 = (sl - ss - 2*s_trapizium )/2.0;
+        }
+        
+        
+        if(in_out == true) // the centre of the sun is inside the ellipse
+        {
+            area = SQ1Q2Os - TQ1Q2Os - S2;
+        }
+        else // // the centre of the sun is outside the ellipse
+        {
+            double area_shadow =  SQ1Q2Os - TQ1Q2Os + S2;
+            area = 3.14159265357*Rs*Rs -area_shadow;
+        }
+        
+        return area;
 
       }
 
@@ -476,22 +483,20 @@ int myperspectiveProjection(double a, double b, GVector& sunpos_ecef, GVector& s
 
         double  r1[2]={0.0,1.0},r2[2]={1.0,0.0};
         // http://www.math.harvard.edu/archive/21b_fall_04/exhibits/2dmatrices/index.html
-        if(K[1]!= 0.0)
-        {
-            r1[0] = lambda1 - K[2];
-            r1[1] = K[1];
-
-            r2[0] = lambda2 - K[2];
-            r2[1] = K[1];
-
-        }
-        else if( fabs(K[2]) < 1.0E-12)
+        if( fabs(K[1]) < 1.0E-12)
         {
             r1[0] = 1;
             r1[1] = 0;
 
             r2[0] = 0;
             r2[1] = 1;
+        }
+        else
+        {
+            r1[0] = lambda1 - K[2];
+            r1[1] = K[1];
+            r2[0] = lambda2 - K[2];
+            r2[1] = K[1];
         }
 
         //get the unit vector
@@ -668,7 +673,7 @@ int myperspectiveProjection(double a, double b, GVector& sunpos_ecef, GVector& s
                 b = sqrt(-BB);
             }
 
-            area_bright = area_hyperbola( Q1, Q2, Os, R0, a, b, in_out, x_axis);
+            area_bright = area_hyperbola( Q1, Q2, Os,PEC_new, R0, a, b, in_out, x_axis);
 
         }
 
