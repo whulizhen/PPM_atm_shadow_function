@@ -74,7 +74,7 @@ using namespace std;
 // solve quartic equation x^4 + a*x^3 + b*x^2 + c*x + d
     unsigned int solve_quartic(double a, double b, double c, double d,double x[4] )
     {
-        double eps = 1e-6;
+        double eps = 1e-5;
         int num_real = 0;
         std::complex<double> retval[4];
 
